@@ -1,0 +1,811 @@
+/* ══════════════════════════════════════════════════════════
+   쇼리릭 — Pink Jelly UI
+   레퍼런스: pink-ice / pink-ocean (젤리 질감 + 빛 반사)
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  --pk-0: #fff0f7;
+  --pk-1: #ffd6ec;
+  --pk-2: #f8a8cf;
+  --pk-3: #e870a8;
+  --pk-4: #cc4888;
+  --pk-5: #a83070;
+  --glass: rgba(255, 255, 255, 0.28);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 4px 24px rgba(180, 50, 120, .18), inset 0 1px 0 rgba(255, 255, 255, .6);
+  --text-main: #1c0610;
+  --text-dim: rgba(100, 20, 60, .55);
+  --font: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  --font-sz: 17px;
+  --font-sz-dim: 12px;
+  --radius-pill: 999px;
+  --radius-card: 20px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 앱 기반 ─────────────────────────────────────────────── */
+.app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(255, 240, 250, .9) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 85% 80%, rgba(255, 200, 230, .7) 0%, transparent 60%),
+    linear-gradient(148deg, #ffd8ed 0%, #f5a0ca 30%, #e060a0 60%, #c04080 100%);
+}
+
+/* ── 젤리 배경 블롭 ─────────────────────────────────────── */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(55px);
+  mix-blend-mode: soft-light;
+}
+
+.b1 {
+  width: 380px;
+  height: 380px;
+  top: -15%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .75) 0%, rgba(255, 210, 235, .4) 55%, transparent 80%);
+  animation: blob 14s ease-in-out infinite;
+}
+
+.b2 {
+  width: 280px;
+  height: 280px;
+  top: 35%;
+  right: -6%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .65) 0%, rgba(245, 160, 210, .3) 55%, transparent 80%);
+  animation: blob 18s ease-in-out infinite 2s reverse;
+}
+
+.b3 {
+  width: 240px;
+  height: 240px;
+  bottom: -10%;
+  left: 25%;
+  background: radial-gradient(circle, rgba(255, 220, 245, .7) 0%, rgba(210, 80, 150, .2) 60%, transparent 80%);
+  animation: blob 22s ease-in-out infinite 5s;
+}
+
+.b4 {
+  width: 200px;
+  height: 200px;
+  top: 20%;
+  left: 40%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .5) 0%, transparent 70%);
+  animation: blob 16s ease-in-out infinite 8s reverse;
+}
+
+@keyframes blob {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  25% {
+    transform: translate(12px, -18px) scale(1.04);
+  }
+
+  50% {
+    transform: translate(-10px, 12px) scale(.96);
+  }
+
+  75% {
+    transform: translate(6px, -6px) scale(1.02);
+  }
+}
+
+/* ── 글래스 공통 ─────────────────────────────────────────── */
+.glass-pill,
+.glass-card {
+  background: var(--glass);
+  backdrop-filter: blur(22px) saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8) brightness(1.08);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-pill {
+  border-radius: var(--radius-pill);
+}
+
+.glass-card {
+  border-radius: var(--radius-card);
+}
+
+/* ── 뷰 공통 ─────────────────────────────────────────────── */
+.view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════
+   가로 뷰
+   ══════════════════════════════════════════════════════════ */
+.h-view {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 10px;
+  -webkit-app-region: drag;
+}
+
+.h-album-wrap {
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.h-album {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.h-lyrics {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 18px;
+  gap: 2px;
+  overflow: hidden;
+  min-height: 52px;
+}
+
+.h-ctrl {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+/* ══════════════════════════════════════════════════════════
+   세로 뷰 (MP3 플레이어)
+   ══════════════════════════════════════════════════════════ */
+.v-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 16px 10px;
+  gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-app-region: drag;
+  scrollbar-width: none;
+}
+
+.v-view::-webkit-scrollbar {
+  display: none;
+}
+
+.v-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.app-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .9);
+  letter-spacing: .5px;
+  text-shadow: 0 1px 4px rgba(150, 30, 80, .4);
+}
+
+.v-header-btns {
+  display: flex;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+/* 앨범아트 */
+.v-album-wrap {
+  flex-shrink: 0;
+}
+
+.v-album {
+  width: 188px;
+  height: 188px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 곡 정보 */
+.v-info {
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.v-song-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .95);
+  text-shadow: 0 1px 6px rgba(150, 30, 80, .35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.v-song-artist {
+  font-size: 12px;
+  color: rgba(255, 255, 255, .65);
+  margin-top: 2px;
+}
+
+/* 프로그레스 */
+.v-progress {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.prog-track {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, .25);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.prog-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .9), rgba(255, 200, 230, .8));
+  transition: width .3s linear;
+  pointer-events: none;
+}
+
+.prog-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 4px rgba(200, 50, 120, .5);
+  pointer-events: none;
+  transition: left .3s linear;
+}
+
+.prog-times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: rgba(255, 255, 255, .55);
+  margin-top: 4px;
+}
+
+/* 세로 가사 */
+.v-lyrics {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* 볼륨 패널 */
+.v-vol-panel {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.vol-val {
+  font-size: 11px;
+  color: rgba(255, 255, 255, .7);
+  min-width: 34px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   공통 가사 스타일
+   ══════════════════════════════════════════════════════════ */
+.lyric {
+  text-align: center;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  width: 100%;
+  transition: opacity .22s ease;
+}
+
+.lyric.main {
+  font-size: var(--font-sz);
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -.01em;
+  -webkit-line-clamp: 3;
+}
+
+.lyric.fading {
+  opacity: 0;
+}
+
+.lyric.dim {
+  font-size: var(--font-sz-dim);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* 앨범아트 공통 */
+.art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.art-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 24px;
+  color: rgba(255, 255, 255, .6);
+  background: linear-gradient(135deg, rgba(255, 200, 230, .3), rgba(200, 80, 150, .2));
+}
+
+.art-ph.v-ph {
+  font-size: 0;
+}
+
+/* SVG 전용 */
+.art-ph.v-ph svg {
+  width: 72px;
+  height: 72px;
+}
+
+/* ══════════════════════════════════════════════════════════
+   컨트롤 버튼 공통
+   ══════════════════════════════════════════════════════════ */
+.ctrl-btn,
+.icon-btn,
+.mode-btn {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, transform .1s;
+  -webkit-app-region: no-drag;
+}
+
+.ctrl-btn:hover,
+.icon-btn:hover,
+.mode-btn:hover {
+  background: rgba(255, 255, 255, .45);
+  transform: scale(1.08);
+}
+
+.ctrl-btn:active,
+.icon-btn:active,
+.mode-btn:active {
+  transform: scale(.94);
+}
+
+.ctrl-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.ctrl-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: rgba(120, 20, 70, .85);
+}
+
+.play-btn {
+  width: 42px;
+  height: 42px;
+}
+
+.play-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--pk-4);
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: rgba(255, 255, 255, .8);
+}
+
+.mode-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.mode-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: rgba(120, 20, 70, .85);
+}
+
+/* 볼륨 */
+.vol-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  -webkit-app-region: no-drag;
+}
+
+.vol-icon {
+  width: 16px;
+  height: 16px;
+  fill: rgba(120, 20, 70, .7);
+  flex-shrink: 0;
+}
+
+.vol-range {
+  -webkit-appearance: none;
+  width: 80px;
+  height: 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, .35);
+  accent-color: var(--pk-4);
+}
+
+.vol-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pk-4);
+  box-shadow: 0 0 4px rgba(200, 50, 100, .5);
+}
+
+/* ══════════════════════════════════════════════════════════
+   iPod 휠 컨트롤
+   ══════════════════════════════════════════════════════════ */
+.wheel-wrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+.wheel {
+  position: relative;
+  width: 188px;
+  height: 188px;
+  flex-shrink: 0;
+}
+
+/* 외부 링 */
+.wheel-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 55% 45% at 38% 32%, rgba(255, 255, 255, .45) 0%, transparent 60%),
+    linear-gradient(145deg, #f0a0c8, #c03880);
+  box-shadow:
+    0 6px 24px rgba(180, 40, 100, .45),
+    inset 0 2px 5px rgba(255, 255, 255, .4),
+    inset 0 -2px 5px rgba(0, 0, 0, .12);
+}
+
+/* 휠 방향 버튼 */
+.wbtn {
+  position: absolute;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, .88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+  transition: color .15s, transform .1s;
+}
+
+.wbtn:hover {
+  color: #fff;
+  transform: scale(1.15);
+}
+
+.wbtn:active {
+  transform: scale(.9);
+}
+
+.wbtn svg {
+  width: 20px;
+  height: 20px;
+  fill: rgba(255, 255, 255, .88);
+}
+
+.wbtn:hover svg {
+  fill: #fff;
+}
+
+.wtop {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+.wtop:hover {
+  transform: translateX(-50%) scale(1.1);
+}
+
+.wbot {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+.wbot:hover {
+  transform: translateX(-50%) scale(1.1);
+}
+
+.wleft {
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.wright {
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* 중앙 재생 버튼 */
+.wheel-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse 55% 45% at 40% 35%, rgba(255, 255, 255, .6) 0%, transparent 55%),
+    linear-gradient(135deg, #ffd4ea, #f080b8);
+  box-shadow:
+    0 4px 14px rgba(180, 40, 100, .4),
+    inset 0 2px 4px rgba(255, 255, 255, .55),
+    inset 0 -2px 4px rgba(0, 0, 0, .1);
+  transition: transform .1s, box-shadow .1s;
+  -webkit-app-region: no-drag;
+}
+
+.wheel-center:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.wheel-center:active {
+  transform: translate(-50%, -50%) scale(.95);
+  box-shadow: 0 2px 8px rgba(180, 40, 100, .3), inset 0 2px 6px rgba(0, 0, 0, .15);
+}
+
+.wheel-center svg {
+  width: 30px;
+  height: 30px;
+  fill: rgba(100, 10, 60, .75);
+}
+
+/* ══════════════════════════════════════════════════════════
+   설정 패널
+   ══════════════════════════════════════════════════════════ */
+.settings-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(180, 40, 100, .15);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  -webkit-app-region: no-drag;
+}
+
+.settings-card {
+  width: min(90%, 320px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.s-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.s-label {
+  font-size: 12px;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+.s-label em {
+  font-style: normal;
+  color: var(--pk-4);
+  margin-left: 4px;
+}
+
+.s-range {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(180, 50, 120, .2);
+  accent-color: var(--pk-3);
+  cursor: pointer;
+}
+
+.s-resetbtn {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.s-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.s-save,
+.s-cancel {
+  flex: 1;
+  padding: 9px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 600;
+}
+
+.s-save {
+  background: var(--pk-3);
+  color: #fff;
+}
+
+.s-cancel {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+}
+
+/* ── 토글 스위치 ─────────────────────────────────────────── */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tog-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: rgba(180, 50, 120, .2);
+  border: 1px solid var(--glass-border);
+  transition: background .2s;
+}
+
+.toggle input:checked+.tog-track {
+  background: var(--pk-3);
+}
+
+.tog-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+  transition: transform .2s;
+}
+
+.toggle input:checked+.tog-track .tog-thumb {
+  transform: translateX(18px);
+}
+
+/* ── scrollbar 숨김 ─────────────────────────────────────── */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}

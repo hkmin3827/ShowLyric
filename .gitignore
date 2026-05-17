@@ -1,0 +1,39 @@
+# 환경변수 — 절대 커밋 금지
+.env
+.env.*
+!.env.example
+
+# 앱 생성 파일
+config.json
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 보안 키
+*.key
+*.pem
+id_rsa
+credentials.json
+
+.claude/
+SECURITY.md
+tasks/
+frontend/reference/
+
+docs/

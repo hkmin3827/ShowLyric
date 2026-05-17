@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>쇼리릭</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="app" class="app" data-mode="horizontal">
+
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+    <div class="blob b4"></div>
+
+    <!-- ══════════════ 가로 뷰 ══════════════════════════════ -->
+    <div id="h-view" class="view h-view">
+
+      <div class="h-album-wrap">
+        <div class="h-album glass-pill">
+          <img id="h-art" class="art-img" style="display:none" alt="">
+          <span id="h-art-ph" class="art-ph">♪</span>
+        </div>
+      </div>
+
+      <div class="h-lyrics glass-pill">
+        <div id="h-prev" class="lyric dim"></div>
+        <div id="h-curr" class="lyric main">쇼리릭 시작 중…</div>
+        <div id="h-next" class="lyric dim"></div>
+      </div>
+
+      <div class="h-ctrl">
+        <button class="ctrl-btn" id="h-prev-btn" title="이전 곡">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+          </svg>
+        </button>
+        <button class="ctrl-btn play-btn" id="h-play-btn" title="재생/정지">
+          <svg class="ico-play" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <svg class="ico-pause hidden" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+        </button>
+        <button class="ctrl-btn" id="h-next-btn" title="다음 곡">
+          <svg viewBox="0 0 24 24">
+            <path d="M6 18l8.5-6L6 6v12zm7.5 0V6h2v12h-2z" />
+          </svg>
+        </button>
+
+        <div class="vol-row">
+          <svg class="vol-icon" viewBox="0 0 24 24">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" />
+          </svg>
+          <input type="range" class="vol-range" id="h-vol" min="0" max="100" value="70">
+        </div>
+
+        <button class="mode-btn" id="h-mode-btn" title="세로 모드로">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 2h10v20H7V2zm2 2v16h6V4H9z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════ 세로 뷰 (MP3 플레이어) ═══════════════ -->
+    <div id="v-view" class="view v-view hidden">
+
+      <div class="v-header">
+        <span class="app-name">쇼리릭</span>
+        <div class="v-header-btns">
+          <button class="icon-btn" id="v-mode-btn" title="가로 모드로">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z" />
+            </svg>
+          </button>
+          <button class="icon-btn" id="v-pin-btn" title="오버레이 고정">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
+            </svg>
+          </button>
+          <button class="icon-btn" id="v-settings-btn" title="설정">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="v-album-wrap">
+        <div class="v-album glass-card">
+          <img id="v-art" class="art-img" style="display:none" alt="">
+          <div id="v-art-ph" class="art-ph v-ph">
+            <svg viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="38" fill="rgba(255,255,255,.25)" />
+              <path
+                d="M32 24v22.4c-1.2-.8-2.7-1.4-4.5-1.4C23.4 45 20 48 20 51.5S23.4 58 27.5 58s7.5-3 7.5-6.5V30h12v10.4c-1.2-.8-2.7-1.4-4.5-1.4C38.4 39 35 42 35 45.5S38.4 52 42.5 52s7.5-3 7.5-6.5V24H32z"
+                fill="rgba(255,255,255,.8)" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-info">
+        <div id="v-title" class="v-song-title">재생 중인 곡 없음</div>
+        <div id="v-artist" class="v-song-artist">—</div>
+      </div>
+
+      <div class="v-progress">
+        <div class="prog-track" id="prog-track">
+          <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+          <div class="prog-thumb" id="prog-thumb" style="left:0%"></div>
+        </div>
+        <div class="prog-times">
+          <span id="v-time-now">0:00</span>
+          <span id="v-time-total">—</span>
+        </div>
+      </div>
+
+      <div class="v-lyrics glass-card">
+        <div id="v-prev" class="lyric dim"></div>
+        <div id="v-curr" class="lyric main">♪</div>
+        <div id="v-next" class="lyric dim"></div>
+      </div>
+
+      <div class="wheel-wrap">
+        <div class="wheel">
+          <div class="wheel-ring">
+            <button class="wbtn wtop" id="w-menu">MENU</button>
+            <button class="wbtn wleft" id="w-prev" title="이전 곡">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+              </svg>
+            </button>
+            <button class="wbtn wright" id="w-next" title="다음 곡">
+              <svg viewBox="0 0 24 24">
+                <path d="M6 18l8.5-6L6 6v12zm7.5 0V6h2v12h-2z" />
+              </svg>
+            </button>
+            <button class="wbtn wbot" id="w-vol">VOL</button>
+          </div>
+          <button class="wheel-center" id="w-play" title="재생/정지">
+            <svg class="ico-play" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg class="ico-pause hidden" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="v-vol-panel hidden" id="v-vol-panel">
+        <svg class="vol-icon" viewBox="0 0 24 24">
+          <path
+            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM16.5 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+        </svg>
+        <input type="range" class="vol-range" id="v-vol" min="0" max="100" value="70">
+        <span class="vol-val" id="v-vol-val">70%</span>
+      </div>
+
+    </div>
+
+    <!-- ══════════════ 설정 패널 ════════════════════════════ -->
+    <div id="settings-panel" class="settings-panel hidden">
+      <div class="settings-card glass-card">
+        <div class="settings-hdr">
+          <span>⚙️ 설정</span>
+          <button class="icon-btn" id="s-close">✕</button>
+        </div>
+
+        <div class="s-row">
+          <span class="s-label">📌 오버레이 고정</span>
+          <label class="toggle">
+            <input type="checkbox" id="s-pinned">
+            <span class="tog-track"><span class="tog-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="s-row">
+          <span class="s-label">🌫 투명도 <em id="s-opacval">96%</em></span>
+          <input type="range" class="s-range" id="s-opacity" min="20" max="100" value="96">
+        </div>
+
+        <div class="s-row">
+          <span class="s-label">🔤 글자 크기 <em id="s-fontval">17px</em></span>
+          <input type="range" class="s-range" id="s-fontsize" min="10" max="36" value="17">
+        </div>
+
+        <div class="s-row">
+          <span class="s-label">📍 창 위치 초기화</span>
+          <button class="s-resetbtn" id="s-reset">기본 위치</button>
+        </div>
+
+        <div class="s-btns">
+          <button class="s-save" id="s-save">저장</button>
+          <button class="s-cancel" id="s-cancel">취소</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+
+</html>
