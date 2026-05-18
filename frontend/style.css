@@ -200,8 +200,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 16px 10px;
-  gap: 10px;
+  justify-content: center;
+  padding: 20px 16px;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-app-region: drag;
@@ -210,6 +210,27 @@ body {
 
 .v-view::-webkit-scrollbar {
   display: none;
+}
+
+/* ── MP3 기기 바디 ─────────────────────────────────────── */
+.mp3-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 270px;
+  padding: 14px 16px 20px;
+  border-radius: 30px;
+  background:
+    radial-gradient(ellipse 65% 40% at 35% 18%, rgba(255, 255, 255, .55) 0%, transparent 52%),
+    linear-gradient(158deg, #fcc8de 0%, #ec88b8 30%, #cc4888 65%, #a83068 100%);
+  box-shadow:
+    0 14px 44px rgba(150, 35, 85, .6),
+    0 4px 14px rgba(200, 60, 120, .3),
+    inset 0 3px 10px rgba(255, 255, 255, .5),
+    inset 0 -3px 8px rgba(0, 0, 0, .22);
+  gap: 14px;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
 }
 
 .v-header {
@@ -222,11 +243,11 @@ body {
 }
 
 .app-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, .9);
+  color: rgba(255, 255, 255, .92);
   letter-spacing: .5px;
-  text-shadow: 0 1px 4px rgba(150, 30, 80, .4);
+  text-shadow: 0 1px 4px rgba(120, 20, 60, .4);
 }
 
 .v-header-btns {
@@ -235,55 +256,105 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* 앨범아트 */
-.v-album-wrap {
-  flex-shrink: 0;
+/* ── 검정 LCD 화면 ─────────────────────────────────────── */
+.mp3-screen {
+  width: 100%;
+  border-radius: 10px;
+  background: #0e0e12;
+  border: 2px solid rgba(0, 0, 0, .85);
+  box-shadow:
+    inset 0 0 28px rgba(0, 0, 0, .9),
+    0 0 0 1px rgba(255, 255, 255, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+  overflow: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  -webkit-app-region: no-drag;
 }
 
-.v-album {
-  width: 188px;
-  height: 188px;
+/* 현재 재생 곡 행 (앨범아트 + 정보) */
+.screen-now-playing {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.screen-album-wrap {
+  width: 74px;
+  height: 74px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, .06);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  position: relative;
+  border: 1px solid rgba(255, 255, 255, .08);
 }
 
-/* 곡 정보 */
-.v-info {
-  text-align: center;
-  flex-shrink: 0;
+.screen-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
+.screen-art-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screen-art-ph svg {
+  width: 54px;
+  height: 54px;
+}
+
+.screen-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+/* 곡 정보 (화면 안) */
 .v-song-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, .95);
-  text-shadow: 0 1px 6px rgba(150, 30, 80, .35);
+  color: #f0e8f8;
+  text-shadow: 0 0 6px rgba(180, 120, 240, .2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 300px;
 }
 
 .v-song-artist {
-  font-size: 12px;
-  color: rgba(255, 255, 255, .65);
-  margin-top: 2px;
+  font-size: 10px;
+  color: rgba(190, 155, 215, .7);
+  margin-top: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 프로그레스 */
+/* 프로그레스 (화면 안 — 어두운 배경) */
 .v-progress {
   width: 100%;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .prog-track {
   position: relative;
   width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, .25);
+  height: 3px;
+  background: rgba(255, 255, 255, .12);
   border-radius: 2px;
   cursor: pointer;
 }
@@ -291,7 +362,7 @@ body {
 .prog-fill {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .9), rgba(255, 200, 230, .8));
+  background: linear-gradient(90deg, #c060a0, #f090c0);
   transition: width .3s linear;
   pointer-events: none;
 }
@@ -300,11 +371,11 @@ body {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 4px rgba(200, 50, 120, .5);
+  background: #f0c8e0;
+  box-shadow: 0 0 4px rgba(200, 80, 150, .6);
   pointer-events: none;
   transition: left .3s linear;
 }
@@ -312,20 +383,32 @@ body {
 .prog-times {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
-  color: rgba(255, 255, 255, .55);
-  margin-top: 4px;
+  font-size: 9px;
+  color: rgba(170, 140, 200, .6);
+  margin-top: 3px;
 }
 
-/* 세로 가사 */
+/* 세로 가사 (화면 안 — 어두운 배경) */
 .v-lyrics {
   width: 100%;
   flex-shrink: 0;
-  padding: 10px 16px;
+  padding: 7px 8px 4px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
+  max-height: 80px;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+}
+
+.v-lyrics .lyric.main {
+  color: #ecdeff;
+  text-shadow: 0 0 10px rgba(180, 120, 255, .2);
+}
+
+.v-lyrics .lyric.dim {
+  color: rgba(170, 140, 210, .5);
 }
 
 /* 볼륨 패널 */
@@ -336,11 +419,16 @@ body {
   gap: 8px;
   -webkit-app-region: no-drag;
   flex-shrink: 0;
+  padding: 2px 4px;
+}
+
+.v-vol-panel .vol-icon {
+  fill: rgba(255, 255, 255, .7);
 }
 
 .vol-val {
   font-size: 11px;
-  color: rgba(255, 255, 255, .7);
+  color: rgba(255, 255, 255, .75);
   min-width: 34px;
 }
 
@@ -558,16 +646,19 @@ body {
   align-items: center;
   justify-content: center;
   -webkit-app-region: no-drag;
+  pointer-events: auto;
   transition: color .15s, transform .1s;
+  width: 46px;
+  height: 46px;
+  z-index: 10;
 }
 
 .wbtn:hover {
   color: #fff;
-  transform: scale(1.15);
 }
 
 .wbtn:active {
-  transform: scale(.9);
+  opacity: .7;
 }
 
 .wbtn svg {
@@ -581,7 +672,7 @@ body {
 }
 
 .wtop {
-  top: 10px;
+  top: 4px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 9px;
@@ -591,10 +682,11 @@ body {
 
 .wtop:hover {
   transform: translateX(-50%) scale(1.1);
+  color: #fff;
 }
 
 .wbot {
-  bottom: 10px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 9px;
@@ -604,18 +696,27 @@ body {
 
 .wbot:hover {
   transform: translateX(-50%) scale(1.1);
+  color: #fff;
 }
 
 .wleft {
-  left: 12px;
+  left: 4px;
   top: 50%;
   transform: translateY(-50%);
 }
 
+.wleft:hover {
+  transform: translateY(-50%) scale(1.15);
+}
+
 .wright {
-  right: 12px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
+}
+
+.wright:hover {
+  transform: translateY(-50%) scale(1.15);
 }
 
 /* 중앙 재생 버튼 */

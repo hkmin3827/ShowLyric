@@ -59,10 +59,29 @@ class App:
     def _on_start(self) -> None:
         """webview 루프 시작 후 별도 스레드에서 호출."""
         self._poller.start()
+        # webview.screens는 start() 이후에만 유효 → 가로 모드 창 너비 정확히 재적용
+        if self.config.layout_mode == "horizontal":
+            self._fix_horizontal_width()
         self._tray = self._create_tray()
         threading.Thread(target=self._tray.run, daemon=True, name="tray").start()
         if self.config.pinned:
             self._api._apply_topmost()
+
+    def _fix_horizontal_width(self) -> None:
+        """가로 모드: pywebview가 인식하는 실제 화면 너비로 창 크기 보정."""
+        try:
+            screens = webview.screens
+            if not screens:
+                return
+            sw = screens[0].width
+            sh = screens[0].height
+            tb_h = self._api._taskbar_height()
+            h = self.config.h_height
+            y = sh - h - tb_h
+            self._api._move_window_atomic(0, y, sw, h)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).debug("가로 모드 너비 보정 실패: %s", e)
 
     def _on_loaded(self) -> None:
         cfg_json = json.dumps(asdict(self.config), ensure_ascii=False)

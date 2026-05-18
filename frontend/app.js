@@ -68,6 +68,7 @@ function api(method, ...args) {
 // ══════════════════════════════════════════════════════════
 // 메인 폴링 루프 (300ms)
 // ══════════════════════════════════════════════════════════
+let _volSyncCounter = 0;
 async function tick() {
   try {
     const d = await api('get_current_state');
@@ -75,10 +76,26 @@ async function tick() {
     updateSongInfo(d);
     updateProgress(d.position, d.duration);
     updateLyrics(d);
+    // 약 15초마다 실제 시스템 볼륨을 슬라이더와 동기화
+    if (++_volSyncCounter >= 50) {
+      _volSyncCounter = 0;
+      syncVolumeFromSystem();
+    }
   } catch (e) {
     console.warn('tick:', e);
   }
   setTimeout(tick, 300);
+}
+
+async function syncVolumeFromSystem() {
+  try {
+    const vol = await api('get_volume');
+    if (vol >= 0) {
+      $('h-vol').value = vol;
+      vVolSlider.value = vol;
+      vVolVal.textContent = vol + '%';
+    }
+  } catch { /* 무시 */ }
 }
 
 // ── 재생 상태 아이콘 ─────────────────────────────────────
@@ -207,11 +224,15 @@ function bindEvents() {
   $('h-mode-btn').addEventListener('click', () => switchMode('vertical'));
   $('v-mode-btn').addEventListener('click', () => switchMode('horizontal'));
 
-  // 고정 토글
-  $('v-pin-btn').addEventListener('click', async () => {
+  // 고정 토글 (가로/세로 모두)
+  async function handlePin() {
     const r = await api('toggle_pin');
-    $('v-pin-btn').style.opacity = r.pinned ? '1' : '0.55';
-  });
+    const op = r.pinned ? '1' : '0.55';
+    $('v-pin-btn').style.opacity = op;
+    $('h-pin-btn').style.opacity = op;
+  }
+  $('v-pin-btn').addEventListener('click', handlePin);
+  $('h-pin-btn').addEventListener('click', handlePin);
 
   // 볼륨 슬라이더
   $('h-vol').addEventListener('input', e => {
@@ -303,12 +324,19 @@ async function saveSettings() {
 
 // ── 볼륨 초기 동기화 ──────────────────────────────────────
 async function startVolumeSync() {
-  try {
-    const vol = await api('get_volume');
-    $('h-vol').value = vol;
-    vVolSlider.value = vol;
-    vVolVal.textContent = vol + '%';
-  } catch { /* pycaw 없으면 기본값 유지 */ }
+  // PS 프로세스가 준비될 때까지 최대 8초 재시도
+  for (let i = 0; i < 16; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const vol = await api('get_volume');
+      if (vol >= 0) {
+        $('h-vol').value = vol;
+        vVolSlider.value = vol;
+        vVolVal.textContent = vol + '%';
+        return;
+      }
+    } catch { /* 무시 */ }
+  }
 }
 
 // ── config 적용 ───────────────────────────────────────────
@@ -321,7 +349,9 @@ function applyConfig(cfg) {
   document.documentElement.style.setProperty('--font-sz', (cfg.font_size || 17) + 'px');
   document.documentElement.style.setProperty('--font-sz-dim', (cfg.font_size_dim || 12) + 'px');
 
-  if (cfg.pinned) $('v-pin-btn').style.opacity = '1';
+  const pinOp = cfg.pinned ? '1' : '0.55';
+  $('v-pin-btn').style.opacity = pinOp;
+  $('h-pin-btn').style.opacity = pinOp;
 }
 
 // ── 유틸 ──────────────────────────────────────────────────
