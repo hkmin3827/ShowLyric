@@ -36,5 +36,7 @@ SECURITY.md
 tasks/
 frontend/reference/
 
-docs/
+docs/*.py
+docs/*.ps1
+docs/*.log
 frontend/UI/
