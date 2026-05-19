@@ -10,6 +10,13 @@ from dotenv import load_dotenv
 load_dotenv()
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "WARNING"))
 
+# 앱 종료 시 WebView2 삭제 후 pywebview 내부에서 발생하는 무해한 ObjectDisposedException 억제
+class _IgnoreDisposed(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "ObjectDisposedException" not in str(record.getMessage())
+
+logging.getLogger("pywebview").addFilter(_IgnoreDisposed())
+
 import webview
 import pystray
 from PIL import Image, ImageDraw

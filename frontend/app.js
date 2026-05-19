@@ -66,25 +66,32 @@ function api(method, ...args) {
 }
 
 // ══════════════════════════════════════════════════════════
-// 메인 폴링 루프 (300ms)
+// 메인 폴링 루프 (150ms)
 // ══════════════════════════════════════════════════════════
 let _volSyncCounter = 0;
+let _tickRunning = true;
+let _tickErrCount = 0;
+
 async function tick() {
+  if (!_tickRunning) return;
   try {
     const d = await api('get_current_state');
+    _tickErrCount = 0;
     updatePlayState(d.is_playing);
     updateSongInfo(d);
     updateProgress(d.position, d.duration);
     updateLyrics(d);
     // 약 15초마다 실제 시스템 볼륨을 슬라이더와 동기화
-    if (++_volSyncCounter >= 50) {
+    if (++_volSyncCounter >= 100) {
       _volSyncCounter = 0;
       syncVolumeFromSystem();
     }
   } catch (e) {
+    // 연속 3회 이상 실패 시 앱 종료 중으로 판단하고 루프 중단
+    if (++_tickErrCount >= 3) { _tickRunning = false; return; }
     console.warn('tick:', e);
   }
-  setTimeout(tick, 300);
+  setTimeout(tick, 150);
 }
 
 async function syncVolumeFromSystem() {
@@ -104,9 +111,12 @@ function updatePlayState(playing) {
   // 가로 뷰
   toggleClass($('h-play-btn').querySelector('.ico-play'), 'hidden', playing);
   toggleClass($('h-play-btn').querySelector('.ico-pause'), 'hidden', !playing);
-  // 세로 뷰
+  // 세로 뷰 휠
   toggleClass($('w-play').querySelector('.ico-play'), 'hidden', playing);
   toggleClass($('w-play').querySelector('.ico-pause'), 'hidden', !playing);
+  // 세로 뷰 LCD 내부
+  toggleClass($('v-lcd-play').querySelector('.ico-play'), 'hidden', playing);
+  toggleClass($('v-lcd-play').querySelector('.ico-pause'), 'hidden', !playing);
 }
 
 // ── 곡 정보 + 앨범아트 (song_id 변경 시만 갱신) ──────────
@@ -199,7 +209,7 @@ function fadeLyric(el, text) {
   if (el.dataset.txt === text) return;
   el.dataset.txt = text;
   el.classList.add('fading');
-  setTimeout(() => { el.textContent = text; el.classList.remove('fading'); }, 220);
+  setTimeout(() => { el.textContent = text; el.classList.remove('fading'); }, 100);
 }
 
 function setDim(el, text) { el.textContent = text; }
@@ -219,6 +229,11 @@ function bindEvents() {
   $('w-next').addEventListener('click', () => api('media_next'));
   $('w-menu').addEventListener('click', toggleSettings);
   $('w-vol').addEventListener('click', toggleVolPanel);
+
+  // 미디어 컨트롤 (세로 LCD 내부)
+  $('v-lcd-prev').addEventListener('click', () => api('media_prev'));
+  $('v-lcd-play').addEventListener('click', () => api('media_play_pause'));
+  $('v-lcd-next').addEventListener('click', () => api('media_next'));
 
   // 모드 전환
   $('h-mode-btn').addEventListener('click', () => switchMode('vertical'));
@@ -324,19 +339,14 @@ async function saveSettings() {
 
 // ── 볼륨 초기 동기화 ──────────────────────────────────────
 async function startVolumeSync() {
-  // PS 프로세스가 준비될 때까지 최대 8초 재시도
-  for (let i = 0; i < 16; i++) {
-    await new Promise(r => setTimeout(r, 500));
-    try {
-      const vol = await api('get_volume');
-      if (vol >= 0) {
-        $('h-vol').value = vol;
-        vVolSlider.value = vol;
-        vVolVal.textContent = vol + '%';
-        return;
-      }
-    } catch { /* 무시 */ }
-  }
+  try {
+    const vol = await api('get_volume');
+    if (vol >= 0) {
+      $('h-vol').value = vol;
+      vVolSlider.value = vol;
+      vVolVal.textContent = vol + '%';
+    }
+  } catch { /* 무시 */ }
 }
 
 // ── config 적용 ───────────────────────────────────────────
