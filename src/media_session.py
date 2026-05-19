@@ -32,10 +32,20 @@ _PS7_SCRIPT = r"""
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]
+
+function Get-BestSession($mgr) {
+    $sessions = $mgr.GetSessions()
+    foreach ($s in $sessions) {
+        if ($s.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing') { return $s }
+    }
+    if ($sessions.Count -gt 0) { return $sessions[0] }
+    return $null
+}
+
+$mgr = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync().GetAwaiter().GetResult()
 while ($true) {
     try {
-        $mgr = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync().GetAwaiter().GetResult()
-        $s = $mgr.GetCurrentSession()
+        $s = Get-BestSession $mgr
         if ($s) {
             $p  = $s.TryGetMediaPropertiesAsync().GetAwaiter().GetResult()
             $tl = $s.GetTimelineProperties()
@@ -60,10 +70,19 @@ while ($true) {
 
 # ── PS5.1 폴링 스크립트 ──────────────────────────────────────
 _PS51_SCRIPT = _PS51_INIT + r"""
+function Get-BestSession($mgr) {
+    $sessions = $mgr.GetSessions()
+    foreach ($s in $sessions) {
+        if ($s.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing') { return $s }
+    }
+    if ($sessions.Count -gt 0) { return $sessions[0] }
+    return $null
+}
+
+$mgr = Await-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 while ($true) {
     try {
-        $mgr = Await-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-        $s = $mgr.GetCurrentSession()
+        $s = Get-BestSession $mgr
         if ($s) {
             $p  = Await-Op ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
             $tl = $s.GetTimelineProperties()
@@ -92,7 +111,12 @@ try {
     $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]
     $null = [Windows.Storage.Streams.DataReader, Windows.Storage, ContentType=WindowsRuntime]
     $mgr = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync().GetAwaiter().GetResult()
-    $s = $mgr.GetCurrentSession()
+    $sessions = $mgr.GetSessions()
+    $s = $null
+    foreach ($sess in $sessions) {
+        if ($sess.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing') { $s = $sess; break }
+    }
+    if (-not $s -and $sessions.Count -gt 0) { $s = $sessions[0] }
     if ($s) {
         $p = $s.TryGetMediaPropertiesAsync().GetAwaiter().GetResult()
         if ($p.Thumbnail) {
@@ -118,7 +142,12 @@ $streamExtType = $winrtAsm.GetType("System.IO.WindowsRuntimeStreamExtensions")
 $asStreamForRead = $streamExtType.GetMethods("Public,Static") | Where-Object { $_.Name -eq "AsStreamForRead" -and $_.GetParameters().Count -eq 1 } | Select-Object -First 1
 try {
     $mgr = Await-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
-    $s = $mgr.GetCurrentSession()
+    $sessions = $mgr.GetSessions()
+    $s = $null
+    foreach ($sess in $sessions) {
+        if ($sess.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing') { $s = $sess; break }
+    }
+    if (-not $s -and $sessions.Count -gt 0) { $s = $sessions[0] }
     if ($s) {
         $p = Await-Op ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
         if ($p.Thumbnail) {
