@@ -209,13 +209,8 @@ body {
    세로 뷰 — MP3 이미지 + 오버레이
    ══════════════════════════════════════════════════════════ */
 .v-view {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: block;
+  overflow: visible;
   -webkit-app-region: drag;
   scrollbar-width: none;
 }
@@ -224,38 +219,34 @@ body {
   display: none;
 }
 
-/* MP3 바디: 높이 기준으로 크기 결정 (60vh) */
+/* MP3 바디: 너비 100%, 높이는 이미지 비율(691:1306)로 자동 결정 */
 .mp3-body {
   position: relative;
-  height: 60vh;
-  width: auto;
-  flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 691 / 1306;
   -webkit-app-region: drag;
 }
 
-/* 실제 MP3 이미지: 높이 100% 채우고 가로는 자동 */
+/* 실제 MP3 이미지: mp3-body를 꽉 채움 (비율 보장됨) */
 .mp3-img {
+  width: 100%;
   height: 100%;
-  width: auto;
   display: block;
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
-  /* 배경제거 PNG의 흰/회색 체크무늬를 배경색과 합성해 제거 */
-  mix-blend-mode: multiply;
 }
 
 /* ══════════════════════════════════════════════════════════
    LCD 오버레이 — mp3-UI.png 내 LCD 위치에 맞춤
-   이미지의 빛나는 효과를 살리면서 내용만 교체
-   실측: LCD 좌상단 ≈ (13%, 13.5%), 우하단 ≈ (87%, 63%)
+   픽셀 분석: LCD 좌상단 ≈ (12.5%, 9%), 우하단 ≈ (87.5%, 57%)
    ══════════════════════════════════════════════════════════ */
 .lcd-overlay {
   position: absolute;
-  top: 13.5%;
-  left: 13.0%;
-  width: 74.0%;
-  height: 49.5%;
+  top: 9%;
+  left: 12.5%;
+  width: 75%;
+  height: 48%;
   /* 완전 불투명 — 밑의 이미지 LCD가 비치지 않도록 */
   background: #04040e;
   border-radius: 6px;
@@ -263,7 +254,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   -webkit-app-region: no-drag;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 2px lime;
 }
 
 /* LCD 상단 반사광 효과 */
@@ -508,52 +499,52 @@ body {
   border: none;
   cursor: pointer;
   -webkit-app-region: no-drag;
-  /* 개발 시 디버그: outline: 1px solid red; */
+  outline: 1px solid red;
 }
 
-/* M 버튼 (상단 중앙) */
+/* M 버튼 (클릭휠 상단 호) */
 .hw-m {
-  top: 63.8%;
+  top: 62%;
   left: 50%;
   transform: translateX(-50%);
-  width: 22%;
-  height: 3.2%;
+  width: 20%;
+  height: 8%;
 }
 
-/* 이전 곡 (클릭휠 왼쪽) */
+/* 이전 곡 (클릭휠 왼쪽 호) */
 .hw-prev {
-  top: 71.5%;
-  left: 10%;
+  top: 70%;
+  left: 16%;
   width: 24%;
-  height: 14%;
-  border-radius: 50%;
-}
-
-/* 재생/정지 (클릭휠 중앙) */
-.hw-play {
-  top: 69.8%;
-  left: 34%;
-  width: 32%;
   height: 18%;
   border-radius: 50%;
 }
 
-/* 다음 곡 (클릭휠 오른쪽) */
-.hw-next {
-  top: 71.5%;
-  left: 66%;
-  width: 24%;
+/* 재생/정지 (클릭휠 중앙 버튼) */
+.hw-play {
+  top: 72%;
+  left: 37%;
+  width: 26%;
   height: 14%;
   border-radius: 50%;
 }
 
-/* VOL 버튼 (하단 중앙) */
+/* 다음 곡 (클릭휠 오른쪽 호) */
+.hw-next {
+  top: 70%;
+  left: 64%;
+  width: 24%;
+  height: 18%;
+  border-radius: 50%;
+}
+
+/* VOL 버튼 (클릭휠 하단 호) */
 .hw-vol {
-  top: 90.5%;
+  top: 85%;
   left: 50%;
   transform: translateX(-50%);
-  width: 28%;
-  height: 3.2%;
+  width: 26%;
+  height: 9%;
 }
 
 /* ── 볼륨 슬라이더 패널 (VOL 클릭 시) ─────────────────── */

@@ -22,9 +22,9 @@ class Config:
     h_y: int = -1         # -1 = 화면 하단 taskbar 위
 
     v_width: int = 360
-    v_height: int = -1    # -1 = 화면 전체 높이
+    v_height: int = -1    # 사용 안 함 (Python에서 비율 계산)
     v_x: int = -1         # -1 = 화면 우측
-    v_y: int = 0
+    v_y: int = -1         # -1 = 화면 하단
 
     # 폰트
     font_size: int = 17

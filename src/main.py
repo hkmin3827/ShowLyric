@@ -28,6 +28,7 @@ from .lyrics_engine import LyricsEngine
 from .media_session import MediaSessionPoller
 
 _FRONTEND = Path(__file__).parent.parent / "frontend" / "index.html"
+_V_IMG_H_RATIO = 1306 / 691  # mp3-UI.png 이미지 세로/가로 비율
 
 
 class App:
@@ -94,9 +95,11 @@ class App:
         cfg_json = json.dumps(asdict(self.config), ensure_ascii=False)
         # config만 주입 — initApp은 pywebviewready 이벤트가 발생할 때 JS에서 호출됨
         self._window.evaluate_js(f"window.__initialConfig = {cfg_json};")
+        self._api._apply_opacity()
 
     def _on_closed(self) -> None:
-        self._save_state()
+        # 종료 시 창 상태 저장 안 함 — DPI 스케일링으로 값 왜곡 방지
+        # 설정 변경은 save_config/set_layout_mode에서 즉시 저장됨
         self._poller.stop()
         if self._tray:
             self._tray.stop()
@@ -151,27 +154,30 @@ class App:
             y_saved = self.config.h_y
             y = y_saved if (0 <= y_saved <= sh - h) else (sh - h - tb_h)
         else:
-            w = self.config.v_width
-            h = sh - tb_h
+            # v_width 범위 검증 (저장된 값이 비정상이면 기본값 360 사용)
+            v_w = self.config.v_width
+            w = v_w if (200 <= v_w <= sw // 2) else 360
+            h = min(round(w * _V_IMG_H_RATIO), sh - tb_h)
             x_saved = self.config.v_x
             x = x_saved if (0 <= x_saved <= sw - w) else (sw - w)
-            y = self.config.v_y if self.config.v_y >= 0 else 0
+            y_saved = self.config.v_y
+            # 기본값: 우측 하단 (-1 또는 0 이하면 bottom 기본값)
+            y = y_saved if (0 < y_saved < sh - h) else (sh - h - tb_h)
         return x, y, w, h
 
     def _save_state(self) -> None:
-        try:
-            import win32gui
-            hwnd = win32gui.FindWindow(None, "Lyric")
-            if hwnd:
-                rect = win32gui.GetWindowRect(hwnd)
-                x, y = rect[0], rect[1]
-                w, h = rect[2] - rect[0], rect[3] - rect[1]
-                if self.config.layout_mode == "horizontal":
-                    self.config.h_x, self.config.h_y, self.config.h_height = x, y, h
-                else:
-                    self.config.v_x, self.config.v_y, self.config.v_width = x, y, w
-        except Exception:
-            pass
+        # 세로 모드: 위치/크기 저장 안 함 — DPI 스케일링으로 값이 계속 바뀌는 문제 방지
+        # 가로 모드: 높이만 저장 (전체 너비는 항상 화면 너비라 저장 불필요)
+        if self.config.layout_mode == "horizontal":
+            try:
+                import win32gui
+                hwnd = win32gui.FindWindow(None, "Lyric")
+                if hwnd:
+                    rect = win32gui.GetWindowRect(hwnd)
+                    h = rect[3] - rect[1]
+                    self.config.h_height = h
+            except Exception:
+                pass
         self.config.save()
 
     @staticmethod

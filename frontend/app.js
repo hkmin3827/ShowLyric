@@ -286,10 +286,10 @@ function bindEvents() {
     document.documentElement.style.setProperty('--font-sz', e.target.value + 'px');
   });
 
-  // 우클릭 → 설정
+  // 우클릭 → 세로 모드에서만 설정
   document.addEventListener('contextmenu', e => {
     e.preventDefault();
-    toggleSettings();
+    if (S.mode === 'vertical') toggleSettings();
   });
 }
 
@@ -300,6 +300,19 @@ async function switchMode(mode) {
   app.dataset.mode = mode;
   toggleClass(hView, 'hidden', mode === 'vertical');
   toggleClass(vView, 'hidden', mode === 'horizontal');
+
+  if (mode === 'horizontal') {
+    // 가로 모드: 고정 디폴트값 (글씨 14px, 투명도 고정)
+    document.documentElement.style.setProperty('--font-sz', '14px');
+    document.documentElement.style.setProperty('--font-sz-dim', '10px');
+  } else {
+    // 세로 모드: 디폴트값으로 초기화 후 사용자 설정 가능
+    const defaults = { font_size: 17, font_size_dim: 12, opacity: 0.96 };
+    Object.assign(S.config, defaults);
+    await api('save_config', defaults);
+    document.documentElement.style.setProperty('--font-sz', '17px');
+    document.documentElement.style.setProperty('--font-sz-dim', '12px');
+  }
 }
 
 // ── 볼륨 패널 토글 ────────────────────────────────────────
@@ -356,8 +369,14 @@ function applyConfig(cfg) {
   toggleClass(hView, 'hidden', S.mode === 'vertical');
   toggleClass(vView, 'hidden', S.mode === 'horizontal');
 
-  document.documentElement.style.setProperty('--font-sz', (cfg.font_size || 17) + 'px');
-  document.documentElement.style.setProperty('--font-sz-dim', (cfg.font_size_dim || 12) + 'px');
+  if (S.mode === 'horizontal') {
+    // 가로 모드: 고정 디폴트값
+    document.documentElement.style.setProperty('--font-sz', '14px');
+    document.documentElement.style.setProperty('--font-sz-dim', '10px');
+  } else {
+    document.documentElement.style.setProperty('--font-sz', (cfg.font_size || 17) + 'px');
+    document.documentElement.style.setProperty('--font-sz-dim', (cfg.font_size_dim || 12) + 'px');
+  }
 
   const pinOp = cfg.pinned ? '1' : '0.55';
   $('v-pin-btn').style.opacity = pinOp;

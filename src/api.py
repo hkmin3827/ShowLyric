@@ -22,6 +22,9 @@ _VK_PLAY_PAUSE = 0xB3
 _VK_NEXT       = 0xB0
 _VK_PREV       = 0xB1
 
+# mp3-UI.png 이미지 비율 (세로/가로)
+_V_IMG_H_RATIO = 1306 / 691
+
 
 class LyricApi:
     def __init__(self, poller: "MediaSessionPoller", lyrics_engine: "LyricsEngine", config: "Config"):
@@ -171,10 +174,11 @@ class LyricApi:
             y = sh - h - tb_h
             self._cfg.h_x, self._cfg.h_y = x, y
         else:
-            w = self._cfg.v_width
-            h = sh - tb_h
+            v_w = self._cfg.v_width
+            w = v_w if (200 <= v_w <= sw // 2) else 360
+            h = min(round(w * _V_IMG_H_RATIO), sh - tb_h)
             x = sw - w
-            y = 0
+            y = sh - h - tb_h  # 우측 하단
             self._cfg.v_x, self._cfg.v_y = x, y
 
         self._cfg.layout_mode = mode
@@ -200,6 +204,7 @@ class LyricApi:
                 pass
         self._cfg.save()
         self._apply_topmost()
+        self._apply_opacity()
 
     def toggle_pin(self) -> dict:
         self._cfg.pinned = not self._cfg.pinned
@@ -257,6 +262,29 @@ class LyricApi:
                 )
         except Exception as e:
             logger.debug("SetWindowPos 실패: %s", e)
+
+    def _apply_opacity(self) -> None:
+        """창 수준 투명도 설정 (WS_EX_LAYERED + LWA_ALPHA).
+        가로 모드: 0.96 고정 / 세로 모드: 설정값 사용.
+        """
+        try:
+            import win32gui
+            hwnd = win32gui.FindWindow(None, "Lyric")
+            if not hwnd:
+                return
+            GWL_EXSTYLE = -20
+            WS_EX_LAYERED = 0x00080000
+            LWA_ALPHA = 0x00000002
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED)
+            if self._cfg.layout_mode == "vertical":
+                opacity = self._cfg.opacity
+            else:
+                opacity = 0.96  # 가로 모드 고정값
+            alpha = max(0, min(255, int(opacity * 255)))
+            ctypes.windll.user32.SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA)
+        except Exception as e:
+            logger.debug("투명도 설정 실패: %s", e)
 
     @staticmethod
     def _send_vk(vk: int) -> None:
