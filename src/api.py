@@ -153,33 +153,24 @@ class LyricApi:
     # ── 레이아웃 모드 전환 ────────────────────────────────────────────
 
     def set_layout_mode(self, mode: str) -> dict:
-        """가로/세로 모드 전환 — 창 크기·위치 변경."""
+        """가로/세로 모드 전환 — 항상 기본 위치·설정으로 초기화."""
         if mode not in ("horizontal", "vertical"):
             return {"error": "invalid mode"}
 
-        try:
-            import webview as _wv
-            screens = _wv.screens
-            sw = screens[0].width if screens else ctypes.windll.user32.GetSystemMetrics(0)
-            sh = screens[0].height if screens else ctypes.windll.user32.GetSystemMetrics(1)
-        except Exception:
-            sw = ctypes.windll.user32.GetSystemMetrics(0)
-            sh = ctypes.windll.user32.GetSystemMetrics(1)
-        tb_h = self._taskbar_height()
+        sw, sh, _ = self._work_area()
 
         if mode == "horizontal":
-            w = sw
-            h = self._cfg.h_height
-            x = 0
-            y = sh - h - tb_h
-            self._cfg.h_x, self._cfg.h_y = x, y
+            w, h = sw, self._cfg.h_height
+            x, y = 0, sh - h
         else:
+            # 세로뷰 전환 시 설정 기본값 리셋
+            self._cfg.opacity = 1.0
+            self._cfg.font_size = 17
+            self._cfg.font_size_dim = 12
             v_w = self._cfg.v_width
             w = v_w if (200 <= v_w <= sw // 2) else 360
-            h = min(round(w * _V_IMG_H_RATIO), sh - tb_h)
-            x = sw - w
-            y = sh - h - tb_h  # 우측 하단
-            self._cfg.v_x, self._cfg.v_y = x, y
+            h = min(round(w * _V_IMG_H_RATIO), sh)
+            x, y = sw - w, sh - h
 
         self._cfg.layout_mode = mode
         self._cfg.save()
@@ -187,7 +178,8 @@ class LyricApi:
         if self._win:
             self._move_window_atomic(x, y, w, h)
 
-        return {"mode": mode, "w": w, "h": h}
+        self._apply_opacity()
+        return {"mode": mode, "w": w, "h": h, "config": asdict(self._cfg)}
 
     # ── 설정 ─────────────────────────────────────────────────────────
 
@@ -236,17 +228,21 @@ class LyricApi:
     # ── 내부 유틸 ─────────────────────────────────────────────────────
 
     def _move_window_atomic(self, x: int, y: int, w: int, h: int) -> None:
-        """위치와 크기를 한 번에 변경 — resize 후 move 순서 때문에 생기는 창 이탈 방지."""
+        """논리 픽셀 좌표를 물리 픽셀로 변환 후 원자적으로 창 이동·크기 변경."""
         try:
             import win32gui
             hwnd = win32gui.FindWindow(None, "Lyric")
             if hwnd:
-                # MoveWindow: 위치+크기를 원자적으로 설정
-                ctypes.windll.user32.MoveWindow(hwnd, x, y, w, h, True)
+                scale = ctypes.windll.user32.GetDpiForSystem() / 96.0
+                ctypes.windll.user32.MoveWindow(
+                    hwnd,
+                    round(x * scale), round(y * scale),
+                    round(w * scale), round(h * scale),
+                    True,
+                )
                 return
         except Exception as e:
             logger.debug("MoveWindow 실패, pywebview 폴백: %s", e)
-        # pywebview 폴백 (move 먼저 — resize보다 move 우선으로 오프스크린 최소화)
         self._win.move(x, y)
         self._win.resize(w, h)
 
@@ -277,10 +273,7 @@ class LyricApi:
             LWA_ALPHA = 0x00000002
             style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style | WS_EX_LAYERED)
-            if self._cfg.layout_mode == "vertical":
-                opacity = self._cfg.opacity
-            else:
-                opacity = 0.96  # 가로 모드 고정값
+            opacity = self._cfg.opacity if self._cfg.layout_mode == "vertical" else 1.0
             alpha = max(0, min(255, int(opacity * 255)))
             ctypes.windll.user32.SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA)
         except Exception as e:
@@ -292,13 +285,22 @@ class LyricApi:
         ctypes.windll.user32.keybd_event(vk, 0, 0x0001 | 0x0002, 0)
 
     @staticmethod
-    def _taskbar_height() -> int:
+    def _work_area() -> tuple[int, int, int]:
+        """주 모니터 논리 픽셀 기준 (작업영역_너비, 작업영역_높이, 태스크바_높이) 반환.
+        GetMonitorInfo(물리 픽셀) ÷ DPI스케일 = 논리 픽셀 → pywebview 좌표계와 일치.
+        """
         try:
-            import win32gui
-            hwnd = win32gui.FindWindow("Shell_TrayWnd", None)
-            if hwnd:
-                r = win32gui.GetWindowRect(hwnd)
-                return r[3] - r[1]
+            import win32api, win32con
+            scale = ctypes.windll.user32.GetDpiForSystem() / 96.0
+            mon = win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY)
+            info = win32api.GetMonitorInfo(mon)
+            work = info['Work']      # physical (left, top, right, bottom)
+            full = info['Monitor']   # physical full screen rect
+            sw = round((work[2] - work[0]) / scale)
+            sh = round((work[3] - work[1]) / scale)
+            fh = round((full[3] - full[1]) / scale)
+            return sw, sh, fh - sh
         except Exception:
-            pass
-        return 48
+            sw = ctypes.windll.user32.GetSystemMetrics(0)
+            sh = ctypes.windll.user32.GetSystemMetrics(1)
+            return sw, sh - 48, 48

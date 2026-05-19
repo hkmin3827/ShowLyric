@@ -254,7 +254,6 @@ body {
   flex-direction: column;
   overflow: hidden;
   -webkit-app-region: no-drag;
-  box-shadow: inset 0 0 0 2px lime;
 }
 
 /* LCD 상단 반사광 효과 */
@@ -499,12 +498,11 @@ body {
   border: none;
   cursor: pointer;
   -webkit-app-region: no-drag;
-  outline: 1px solid red;
 }
 
 /* M 버튼 (클릭휠 상단 호) */
 .hw-m {
-  top: 62%;
+  top: 60%;
   left: 50%;
   transform: translateX(-50%);
   width: 20%;
@@ -513,37 +511,37 @@ body {
 
 /* 이전 곡 (클릭휠 왼쪽 호) */
 .hw-prev {
-  top: 70%;
-  left: 16%;
-  width: 24%;
+  top: 67%;
+  left: 19%;
+  width: 18%;
   height: 18%;
   border-radius: 50%;
 }
 
 /* 재생/정지 (클릭휠 중앙 버튼) */
 .hw-play {
-  top: 72%;
+  top: 69%;
   left: 37%;
   width: 26%;
-  height: 14%;
+  height: 13%;
   border-radius: 50%;
 }
 
 /* 다음 곡 (클릭휠 오른쪽 호) */
 .hw-next {
-  top: 70%;
+  top: 67%;
   left: 64%;
-  width: 24%;
+  width: 18%;
   height: 18%;
   border-radius: 50%;
 }
 
 /* VOL 버튼 (클릭휠 하단 호) */
 .hw-vol {
-  top: 85%;
+  top: 82%;
   left: 50%;
   transform: translateX(-50%);
-  width: 26%;
+  width: 23%;
   height: 9%;
 }
 
@@ -601,7 +599,7 @@ body {
 
 .lyric.main {
   font-size: var(--font-sz);
-  font-weight: 700;
+  font-weight: 600;
   color: #1c0610;
   letter-spacing: -.01em;
   -webkit-line-clamp: 3;

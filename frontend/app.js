@@ -302,12 +302,11 @@ async function switchMode(mode) {
   toggleClass(vView, 'hidden', mode === 'horizontal');
 
   if (mode === 'horizontal') {
-    // 가로 모드: 고정 디폴트값 (글씨 14px, 투명도 고정)
-    document.documentElement.style.setProperty('--font-sz', '14px');
-    document.documentElement.style.setProperty('--font-sz-dim', '10px');
+    document.documentElement.style.setProperty('--font-sz', (S.config.h_font_size || 14) + 'px');
+    document.documentElement.style.setProperty('--font-sz-dim', (S.config.h_font_size_dim || 10) + 'px');
   } else {
     // 세로 모드: 디폴트값으로 초기화 후 사용자 설정 가능
-    const defaults = { font_size: 17, font_size_dim: 12, opacity: 0.96 };
+    const defaults = { font_size: 17, font_size_dim: 12, opacity: 1.0 };
     Object.assign(S.config, defaults);
     await api('save_config', defaults);
     document.documentElement.style.setProperty('--font-sz', '17px');
@@ -370,9 +369,8 @@ function applyConfig(cfg) {
   toggleClass(vView, 'hidden', S.mode === 'horizontal');
 
   if (S.mode === 'horizontal') {
-    // 가로 모드: 고정 디폴트값
-    document.documentElement.style.setProperty('--font-sz', '14px');
-    document.documentElement.style.setProperty('--font-sz-dim', '10px');
+    document.documentElement.style.setProperty('--font-sz', (cfg.h_font_size || 14) + 'px');
+    document.documentElement.style.setProperty('--font-sz-dim', (cfg.h_font_size_dim || 10) + 'px');
   } else {
     document.documentElement.style.setProperty('--font-sz', (cfg.font_size || 17) + 'px');
     document.documentElement.style.setProperty('--font-sz-dim', (cfg.font_size_dim || 12) + 'px');

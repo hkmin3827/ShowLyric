@@ -67,29 +67,10 @@ class App:
     def _on_start(self) -> None:
         """webview 루프 시작 후 별도 스레드에서 호출."""
         self._poller.start()
-        # webview.screens는 start() 이후에만 유효 → 가로 모드 창 너비 정확히 재적용
-        if self.config.layout_mode == "horizontal":
-            self._fix_horizontal_width()
         self._tray = self._create_tray()
         threading.Thread(target=self._tray.run, daemon=True, name="tray").start()
         if self.config.pinned:
             self._api._apply_topmost()
-
-    def _fix_horizontal_width(self) -> None:
-        """가로 모드: pywebview가 인식하는 실제 화면 너비로 창 크기 보정."""
-        try:
-            screens = webview.screens
-            if not screens:
-                return
-            sw = screens[0].width
-            sh = screens[0].height
-            tb_h = self._api._taskbar_height()
-            h = self.config.h_height
-            y = sh - h - tb_h
-            self._api._move_window_atomic(0, y, sw, h)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).debug("가로 모드 너비 보정 실패: %s", e)
 
     def _on_loaded(self) -> None:
         cfg_json = json.dumps(asdict(self.config), ensure_ascii=False)
@@ -143,26 +124,16 @@ class App:
     # ── 유틸 ─────────────────────────────────────────────────────────
 
     def _initial_geometry(self) -> tuple[int, int, int, int]:
-        sw = ctypes.windll.user32.GetSystemMetrics(0)
-        sh = ctypes.windll.user32.GetSystemMetrics(1)
-        tb_h = self._api._taskbar_height()
-
+        """_work_area() 기준 논리 픽셀로 초기 창 위치·크기 계산."""
+        sw, sh, _ = self._api._work_area()
         if self.config.layout_mode == "horizontal":
-            w = sw
-            h = self.config.h_height
-            x = self.config.h_x if self.config.h_x >= 0 else 0
-            y_saved = self.config.h_y
-            y = y_saved if (0 <= y_saved <= sh - h) else (sh - h - tb_h)
+            w, h = sw, self.config.h_height
+            x, y = 0, sh - h
         else:
-            # v_width 범위 검증 (저장된 값이 비정상이면 기본값 360 사용)
             v_w = self.config.v_width
             w = v_w if (200 <= v_w <= sw // 2) else 360
-            h = min(round(w * _V_IMG_H_RATIO), sh - tb_h)
-            x_saved = self.config.v_x
-            x = x_saved if (0 <= x_saved <= sw - w) else (sw - w)
-            y_saved = self.config.v_y
-            # 기본값: 우측 하단 (-1 또는 0 이하면 bottom 기본값)
-            y = y_saved if (0 < y_saved < sh - h) else (sh - h - tb_h)
+            h = min(round(w * _V_IMG_H_RATIO), sh)
+            x, y = sw - w, sh - h
         return x, y, w, h
 
     def _save_state(self) -> None:
