@@ -38,3 +38,6 @@ frontend/reference/
 
 docs/
 frontend/UI/
+*.vbs
+*.spec
+*.bat
