@@ -27,9 +27,10 @@
 - 가사 싱크 정확도: 150ms 폴링 + 80ms 선행 보상(lookahead)
 - 가로 모드(화면 하단 바) / 세로 모드(핑크 MP3 플레이어 스타일) 두 가지 레이아웃
 - 앨범아트 표시 (SMTC 썸네일 → iTunes API 폴백)
+- 세로 모드 투명 배경 (Win32 컬러키 방식 — MP3 기기 외부 영역 투명화)
 - 시스템 트레이 상주, 항상 위 고정 옵션
 - 가사 로컬 캐시 (최대 500곡, 반복 API 호출 없음)
-- DPI 스케일 대응 창 위치 계산
+- DPI 스케일 대응 창 위치 계산 (GetMonitorInfo + DPI 스케일 변환)
 
 ---
 
@@ -38,13 +39,15 @@
 | 분류 | 기술 | 버전 | 용도 |
 |------|------|------|------|
 | **런타임** | Python | 3.11+ | 백엔드 전체 |
-| **UI 렌더링** | pywebview + WebView2 | 6.2+ | 프레임리스 오버레이 창 |
+| **UI 렌더링** | pywebview + WebView2 | 4.4.0+ | 프레임리스 오버레이 창 |
 | **시스템 트레이** | pystray | 0.19+ | 트레이 아이콘·메뉴 |
 | **미디어 감지** | Windows SMTC (WinRT) | — | 현재 재생곡 폴링 |
 | **SMTC 브리지** | PowerShell 5.1 / 7 | — | WinRT → JSON 변환 |
 | **가사 API** | LRCLIB.net | — | 싱크 가사 검색 |
 | **앨범아트 폴백** | iTunes Search API | — | 썸네일 없을 때 대체 |
-| **볼륨 제어** | pycaw + comtypes | — | 시스템 마스터 볼륨 (IAudioEndpointVolume) |
+| **볼륨 제어** | pycaw + comtypes | — | 시스템 마스터 볼륨 (EndpointVolume) |
+| **HTTP** | requests | 2.31.0+ | LRCLIB / iTunes API 호출 |
+| **환경변수** | python-dotenv | 1.0.0+ | .env 로드 |
 | **이미지 처리** | Pillow | 10+ | 트레이 아이콘 생성 |
 | **창 관리** | pywin32 (win32gui, win32api) | 306+ | 창 위치·DPI 계산 |
 | **프론트엔드** | HTML5 + CSS3 + Vanilla JS | — | 젤리 핑크 테마 UI |
@@ -58,6 +61,8 @@
 lyric-app/
 │
 ├── run.py                      # 진입점 — python run.py 로 실행
+├── start_showlyric.vbs         # 콘솔 창 없이 실행 (더블클릭 실행용)
+├── install_autostart.bat       # 시작 프로그램 등록·해제
 │
 ├── src/                        # Python 백엔드 패키지
 │   ├── __init__.py
@@ -68,16 +73,23 @@ lyric-app/
 │   ├── cache_manager.py        # 가사 캐시 (메모리 + 디스크)
 │   ├── config.py               # 설정 기본값 정의 (앱 시작 시 항상 이 값 사용)
 │   │
-│   └── security/
-│       └── validator.py        # 입력값 검증·새니타이징
+│   ├── security/
+│   │   └── validator.py        # 입력값 검증·새니타이징
+│   │
+│   └── ui/                     # [레거시] customtkinter 기반 구 버전 UI (미사용)
+│       ├── overlay.py
+│       └── settings_window.py
 │
 ├── frontend/                   # 웹 UI (pywebview로 로드)
 │   ├── index.html              # 전체 HTML 구조 (가로뷰·세로뷰·설정 패널)
 │   ├── app.js                  # 폴링 루프·이벤트 바인딩·가사 렌더링
 │   ├── style.css               # 젤리 핑크 테마 (글라스모피즘)
-│   └── UI/                     # 이미지 에셋
-│       ├── mp3-UI.png          # 세로 모드 MP3 플레이어 이미지 (691×1306px)
-│       └── background-image.png # 가로 모드 배경
+│   ├── UI/                     # 이미지 에셋
+│   │   ├── mp3-UI.png          # 세로 모드 MP3 플레이어 이미지 (691×1306px)
+│   │   ├── background-image.png # 가로 모드 배경
+│   │   ├── app-logo.png        # 앱 로고
+│   │   └── app-logo.ico        # 앱 아이콘
+│   └── reference/              # 디자인 참고 이미지
 │
 ├── .cache/
 │   └── lyrics.json             # 가사 로컬 캐시 (최대 500곡)
@@ -99,6 +111,19 @@ lyric-app/
 ---
 
 ## 동작 방식
+
+### 0. 시작 시퀀스
+
+```
+App.__init__
+  ├─ Config.load()          → 항상 기본값 반환 (config.json 무시)
+  ├─ _initial_geometry()    → _work_area()로 논리 픽셀 기준 초기 창 위치 계산
+  └─ webview.create_window() → 논리 픽셀 좌표로 창 생성
+
+webview.start(func=_on_start)
+  └─ _on_start()            → MediaSessionPoller 시작, 트레이 생성
+      └─ _on_loaded()       → JS에 초기 config 주입, 투명도 적용
+```
 
 ### 1. 미디어 감지 (media_session.py)
 
@@ -152,9 +177,16 @@ pywebview의 `js_api` 기능으로 JS에서 Python 메서드를 직접 호출합
 | `get_current_state()` | `LyricApi.get_current_state()` | 현재 가사·재생 상태 (150ms마다 폴링) |
 | `get_album_art()` | `LyricApi.get_album_art()` | base64 data URL 반환 |
 | `set_layout_mode(mode)` | `LyricApi.set_layout_mode()` | 모드 전환 + 기본값 리셋 + 창 이동 |
-| `set_volume(pct)` | `LyricApi.set_volume()` | pycaw IAudioEndpointVolume 직접 설정 |
+| `get_volume()` | `LyricApi.get_volume()` | 현재 시스템 볼륨 반환 (0–100) |
+| `set_volume(pct)` | `LyricApi.set_volume()` | pycaw EndpointVolume 직접 설정 (1:1 매핑) |
 | `toggle_pin()` | `LyricApi.toggle_pin()` | HWND_TOPMOST 토글 |
 | `save_config(data)` | `LyricApi.save_config()` | 설정 저장 + 투명도 재적용 |
+| `reset_position()` | `LyricApi.reset_position()` | 창 위치 기본값으로 초기화 |
+| `save_window_state(x,y,w,h)` | `LyricApi.save_window_state()` | 현재 창 위치·크기 저장 |
+| `media_prev()` | `LyricApi.media_prev()` | 이전 곡 (VK 키 이벤트) |
+| `media_play_pause()` | `LyricApi.media_play_pause()` | 재생/정지 (VK 키 이벤트) |
+| `media_next()` | `LyricApi.media_next()` | 다음 곡 (VK 키 이벤트) |
+| `close_app()` | `LyricApi.close_app()` | 앱 종료 |
 
 ### 5. 창 위치 계산 (_work_area)
 
@@ -169,6 +201,15 @@ sh    = round(work_height / scale)
 # MoveWindow 호출 시 다시 물리 픽셀로 변환
 MoveWindow(hwnd, round(x*scale), round(y*scale), round(w*scale), round(h*scale))
 ```
+
+### 6. 설정 초기화 아키텍처
+
+앱 실행 및 모드 전환 시 항상 `config.py` 기본값에서 시작합니다.
+
+- `Config.load()` → 항상 `cls()` 반환 (config.json 읽지 않음)
+- 세션 중 설정 변경 → 메모리(Config 객체) + config.json 임시 기록
+- 앱 재시작 → 기본값으로 리셋
+- 가로→세로 전환 → `set_layout_mode()`에서 opacity=1.0, font=17 강제 리셋
 
 ---
 
@@ -227,11 +268,31 @@ pip install -r requirements.txt
 python run.py
 ```
 
+콘솔 창 없이 실행 (더블클릭):
+```
+start_showlyric.vbs 더블클릭
+```
+
+### 자동 시작 등록 (선택)
+
+```bash
+install_autostart.bat
+```
+시작 프로그램에 등록하거나 해제합니다.
+
+### 배포용 exe 빌드 (선택)
+
+```bash
+pip install pyinstaller
+pyinstaller showlyric.spec
+# 결과물: dist\쇼리릭\쇼리릭.exe
+```
+
 ### 개발 모드 (DevTools)
 
-`src/main.py`에서 `debug=True` 유지 (현재 기본값):
+`src/main.py`에서 `debug=True`로 변경:
 ```python
-webview.start(func=self._on_start, debug=True)
+webview.start(func=self._on_start, debug=True)  # 기본값: False
 ```
 
 ---
@@ -263,7 +324,7 @@ webview.start(func=self._on_start, debug=True)
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ [앨범아트]  이전 가사                               ◀ ⏯ ▶ 🔊│
-│            ★ 현재 가사 (크고 굵게)                  [세로↕] │
+│            ★ 현재 가사 (크고 굵게)                  📌 [세로↕]│
 │            다음 가사                                         │
 └─────────────────────────────────────────────────────────────┘
 (화면 하단 고정, 전체 너비)
@@ -276,7 +337,7 @@ webview.start(func=self._on_start, debug=True)
 
 ```
 ┌──────────┐
-│ 쇼리릭 ↔📌│
+│ [가로↔] 📌 ⚙ │
 ├──────────┤  ← LCD 오버레이 (mp3-UI.png 위)
 │ [앨범아트]│
 │ 곡명      │
@@ -294,6 +355,8 @@ webview.start(func=self._on_start, debug=True)
 (화면 우측 하단 고정)
 ```
 
+- MP3 플레이어 이미지(mp3-UI.png) 배경에 LCD 오버레이 방식
+- 투명 배경: Win32 컬러키(LWA_COLORKEY) 방식으로 기기 외부 영역 투명화
 - 투명도 사용자 설정 가능 (기본 1.0)
 - 전환 시마다 기본값으로 리셋
 
@@ -318,6 +381,11 @@ h_font_size: int = 15    # 가로 현재 가사
 | 가로뷰 가사 박스 | `.h-lyrics` |
 | 세로뷰 MP3 바디 | `.mp3-body` |
 | LCD 오버레이 위치 | `.lcd-overlay` (top/left/width/height %) |
-| 클릭휠 버튼 위치 | `.hw-m`, `.hw-prev`, `.hw-play`, `.hw-next`, `.hw-vol` |
+| MENU 버튼 | `.hw-m` |
+| 이전 곡 버튼 | `.hw-prev` |
+| 재생/정지 버튼 | `.hw-play` |
+| 다음 곡 버튼 | `.hw-next` |
+| 볼륨 버튼 | `.hw-vol` |
 
-버튼 `top` / `left` 값은 `mp3-body` 크기 대비 `%`입니다.
+버튼 `top` / `left` 값은 `mp3-body` 크기 대비 `%`입니다.  
+mp3-UI.png 기준: LCD 상단 ≈ 9%, 클릭휠 중심 ≈ 79%

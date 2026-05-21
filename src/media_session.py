@@ -248,6 +248,7 @@ class MediaSessionPoller:
                 [exe, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", tmp_ps],
                 capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=timeout,
+                creationflags=subprocess.CREATE_NO_WINDOW,
             )
             return (r.stdout or "").strip()
         except (FileNotFoundError, OSError):

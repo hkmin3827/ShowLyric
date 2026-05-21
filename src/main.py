@@ -60,7 +60,7 @@ class App:
     # ── 실행 ─────────────────────────────────────────────────────────
 
     def run(self) -> None:
-        webview.start(func=self._on_start, debug=True)
+        webview.start(func=self._on_start, debug=False)
 
     # ── 이벤트 콜백 ──────────────────────────────────────────────────
 

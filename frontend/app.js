@@ -242,6 +242,7 @@ function bindEvents() {
   // 고정 토글 (가로/세로 모두)
   async function handlePin() {
     const r = await api('toggle_pin');
+    S.config.pinned = r.pinned;
     const op = r.pinned ? '1' : '0.55';
     $('v-pin-btn').style.opacity = op;
     $('h-pin-btn').style.opacity = op;
@@ -346,6 +347,9 @@ async function saveSettings() {
   Object.assign(S.config, updated);
   await api('save_config', updated);
   document.documentElement.style.setProperty('--font-sz', updated.font_size + 'px');
+  const pinOp = updated.pinned ? '1' : '0.55';
+  $('v-pin-btn').style.opacity = pinOp;
+  $('h-pin-btn').style.opacity = pinOp;
   closeSettings();
 }
 
