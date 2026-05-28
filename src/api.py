@@ -226,7 +226,7 @@ class LyricApi:
         else:
             # 세로뷰 전환 시 설정 기본값 리셋
             self._cfg.opacity = 1.0
-            self._cfg.font_size = 17
+            self._cfg.font_size = 15
             self._cfg.font_size_dim = 12
             v_w = self._cfg.v_width
             w = v_w if (200 <= v_w <= sw // 2) else 360

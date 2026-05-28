@@ -225,7 +225,7 @@ MoveWindow(hwnd, round(x*scale), round(y*scale), round(w*scale), round(h*scale))
 - `Config.load()` → 항상 `cls()` 반환 (config.json 읽지 않음)
 - 세션 중 설정 변경 → 메모리(Config 객체) + config.json 임시 기록
 - 앱 재시작 → 기본값으로 리셋
-- 가로→세로 전환 → `set_layout_mode()`에서 opacity=1.0, font=17 강제 리셋
+- 가로→세로 전환 → `set_layout_mode()`에서 opacity=1.0, font=15 강제 리셋
 
 ---
 

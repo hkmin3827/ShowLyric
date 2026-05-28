@@ -344,7 +344,7 @@ async function switchMode(mode) {
     const defaults = { font_size: 15, font_size_dim: 12, opacity: 1.0 };
     Object.assign(S.config, defaults);
     await api("save_config", defaults);
-    document.documentElement.style.setProperty("--font-sz", "17px");
+    document.documentElement.style.setProperty("--font-sz", "15px");
     document.documentElement.style.setProperty("--font-sz-dim", "12px");
   }
 }
@@ -369,7 +369,7 @@ function syncSettingsUI() {
   $("s-pinned").checked = S.config.pinned || false;
   $("s-opacity").value = Math.round((S.config.opacity || 0.96) * 100);
   $("s-opacval").textContent = $("s-opacity").value + "%";
-  $("s-fontsize").value = S.config.font_size || 17;
+  $("s-fontsize").value = S.config.font_size || 15;
   $("s-fontval").textContent = $("s-fontsize").value + "px";
 }
 async function saveSettings() {
@@ -423,7 +423,7 @@ function applyConfig(cfg) {
   } else {
     document.documentElement.style.setProperty(
       "--font-sz",
-      (cfg.font_size || 17) + "px",
+      (cfg.font_size || 15) + "px",
     );
     document.documentElement.style.setProperty(
       "--font-sz-dim",

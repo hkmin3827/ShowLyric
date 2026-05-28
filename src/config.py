@@ -27,7 +27,7 @@ class Config:
     v_y: int = -1         # -1 = 화면 하단
 
     # 폰트 — 세로 뷰
-    font_size: int = 17
+    font_size: int = 15
     font_size_dim: int = 12
     # 폰트 — 가로 뷰
     h_font_size: int = 15
