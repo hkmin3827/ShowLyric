@@ -105,7 +105,7 @@ class LyricsEngine:
             return None
 
         synced = data.get("syncedLyrics") or ""
-        if synced:
+        if synced and len(synced) <= 500_000:  # 500KB 상한 (~5000줄)
             return self._parse_lrc(synced)
 
         # 타임스탬프 없는 일반 가사 → 균등 분배
@@ -141,7 +141,7 @@ class LyricsEngine:
             if not validate_lrclib_response(item):
                 continue
             synced = item.get("syncedLyrics") or ""
-            if synced:
+            if synced and len(synced) <= 500_000:
                 return self._parse_lrc(synced)
             plain = sanitize_text(item.get("plainLyrics") or "")
             if plain:

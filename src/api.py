@@ -246,12 +246,23 @@ class LyricApi:
     def get_config(self) -> dict:
         return asdict(self._cfg)
 
+    _CFG_INT_LIMITS: dict = {
+        "h_height": (30, 400), "v_width": (150, 800),
+        "font_size": (8, 72), "font_size_dim": (6, 48),
+        "h_font_size": (8, 48), "h_font_size_dim": (6, 36),
+        "poll_interval_ms": (100, 2000),
+    }
+
     def save_config(self, data: dict) -> None:
         for k, v in data.items():
             if not hasattr(self._cfg, k):
                 continue
             try:
-                setattr(self._cfg, k, type(getattr(self._cfg, k))(v))
+                typed = type(getattr(self._cfg, k))(v)
+                if k in self._CFG_INT_LIMITS:
+                    lo, hi = self._CFG_INT_LIMITS[k]
+                    typed = max(lo, min(hi, typed))
+                setattr(self._cfg, k, typed)
             except (TypeError, ValueError):
                 pass
         self._cfg.save()

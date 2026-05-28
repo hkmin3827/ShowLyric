@@ -241,8 +241,9 @@ class MediaSessionPoller:
         if result and result.startswith("OK:"):
             tmp_path = result[3:].strip()
             try:
+                _MAX_IMG = 10 * 1024 * 1024  # 10MB 상한
                 with open(tmp_path, "rb") as f:
-                    raw = f.read()
+                    raw = f.read(_MAX_IMG)
                 os.unlink(tmp_path)
                 if raw:
                     mime = "image/png" if raw[:4] == b"\x89PNG" else "image/jpeg"
@@ -302,9 +303,11 @@ class MediaSessionPoller:
                 if not url:
                     continue
                 url = url.replace("100x100bb", "600x600bb")
-                img = requests.get(url, timeout=5)
-                if img.ok and img.content:
-                    raw = img.content
+                img = requests.get(url, timeout=5, stream=True)
+                if not img.ok:
+                    continue
+                raw = img.raw.read(10 * 1024 * 1024)  # 10MB 상한
+                if raw:
                     mime = "image/jpeg" if raw[:2] == b"\xff\xd8" else "image/png"
                     return f"data:{mime};base64,{base64.b64encode(raw).decode()}"
         except Exception as e:
