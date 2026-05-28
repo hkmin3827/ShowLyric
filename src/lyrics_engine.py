@@ -12,7 +12,8 @@ from .security.validator import sanitize_text, sanitize_search_query, validate_l
 logger = logging.getLogger(__name__)
 
 _LRCLIB_BASE = "https://lrclib.net/api"
-_TIMEOUT = 8  # 초
+_TIMEOUT_GET    = 4  # /api/get — 단순 조회, 빠름
+_TIMEOUT_SEARCH = 8  # /api/search — 폴백 검색, 느릴 수 있음
 _LRC_PATTERN = re.compile(r"\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)")
 
 LyricLine = Tuple[float, str]   # (timestamp_seconds, text)
@@ -73,8 +74,7 @@ class LyricsEngine:
         next_text = lyrics[idx + 1][1] if idx < len(lyrics) - 1 else ""
         return prev_text, curr_text, next_text
 
-    # ── LRCLIB 호출 ──────────────────────────────────────────────────
-
+    # ── LRCLIB 호출 ───
     def _fetch_synced(self, title: str, artist: str) -> Optional[List[LyricLine]]:
         params: dict = {"track_name": sanitize_search_query(title)}
         if artist:
@@ -84,7 +84,7 @@ class LyricsEngine:
             resp = self._session.get(
                 f"{_LRCLIB_BASE}/get",
                 params=params,
-                timeout=_TIMEOUT,
+                timeout=_TIMEOUT_GET,
             )
         except requests.RequestException as e:
             logger.warning("LRCLIB 요청 실패: %s", e)
@@ -122,7 +122,7 @@ class LyricsEngine:
             resp = self._session.get(
                 f"{_LRCLIB_BASE}/search",
                 params={"q": q},
-                timeout=_TIMEOUT,
+                timeout=_TIMEOUT_SEARCH,
             )
         except requests.RequestException as e:
             logger.warning("LRCLIB 검색 실패: %s", e)
@@ -148,8 +148,7 @@ class LyricsEngine:
                 return self._distribute_plain(plain)
         return None
 
-    # ── LRC 파싱 ─────────────────────────────────────────────────────
-
+    # ── LRC 파싱 ──
     @staticmethod
     def _parse_lrc(lrc_text: str) -> List[LyricLine]:
         lines: List[LyricLine] = []

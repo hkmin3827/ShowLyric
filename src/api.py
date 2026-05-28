@@ -1,10 +1,6 @@
-"""JS ↔ Python 브릿지 — pywebview js_api.
-
-window.pywebview.api.method() 형태로 JS에서 호출.
-반환값 있는 메서드는 JS에서 자동으로 Promise 처리됨.
-"""
 import ctypes
 import logging
+import threading
 import time
 from dataclasses import asdict
 from typing import TYPE_CHECKING
@@ -35,18 +31,44 @@ class LyricApi:
 
         self._last_song_id = ""
         self._current_lyrics: list = []
+        self._lyrics_lock = threading.Lock()
+        self._lyrics_loading = False
 
-        # 가사 position 실시간 추정용
+        # SMTC position 실시간 추정용
         self._pos_base = 0.0
         self._pos_base_time = 0.0
         self._pos_was_playing = False
+        self._paused_position = 0.0   # 일시정지 시점의 추정 위치
+        self._prev_smtc_pos = 0.0     # 이전 SMTC raw position (seek 감지용)
 
-    # ── 가사 상태 (JS가 300ms마다 폴링) ──────────────────────────────
 
+    # ── 가사 상태 (JS가 300ms마다 폴링) ──
     def get_current_state(self) -> dict:
         info = self._poller.get_current_info()
 
-        # SMTC는 500ms 간격 업데이트 → 경과 시간을 더해 실시간 position 추정
+        # fix: 새 곡 감지를 position 추정보다 먼저 처리
+        # → 무정지 곡 전환(gapless) 시에도 타이머가 확실히 리셋됨
+        if not info.is_empty():
+            song_id = info.song_id()
+            if song_id != self._last_song_id:
+                self._last_song_id = song_id
+                raw = info.position if info.position > 0.5 else 0.0
+                self._pos_base = raw
+                self._paused_position = raw   # 0.0이 아닌 실제 위치로 초기화
+                self._prev_smtc_pos = info.position
+                self._pos_base_time = time.monotonic()
+                self._pos_was_playing = info.is_playing
+                # 가사 즉시 클리어 후 백그라운드에서 로드 → JS 폴링 블로킹 X
+                with self._lyrics_lock:
+                    self._current_lyrics = []
+                    self._lyrics_loading = True
+                threading.Thread(
+                    target=self._fetch_lyrics_bg,
+                    args=(info.title, info.artist, song_id),
+                    daemon=True,
+                    name="lyrics-fetch",
+                ).start()
+
         position = self._estimate_position(info)
 
         base = {
@@ -61,53 +83,87 @@ class LyricApi:
         if info.is_empty():
             return {**base, "status": "idle"}
 
+        with self._lyrics_lock:
+            lyrics = list(self._current_lyrics)
+            loading = self._lyrics_loading
+
         if not info.is_playing:
-            song_id = info.song_id()
-            if song_id != self._last_song_id:
-                self._last_song_id = song_id
-                self._current_lyrics = self._lyrics_engine.get_lyrics(info.title, info.artist)
-            idx = self._lyrics_engine.get_current_index(self._current_lyrics, position)
-            _, curr, _ = self._lyrics_engine.get_context(self._current_lyrics, idx)
+            idx = self._lyrics_engine.get_current_index(lyrics, position)
+            _, curr, _ = self._lyrics_engine.get_context(lyrics, idx)
             return {**base, "status": "paused", "current": curr, "prev": "", "next": ""}
 
-        song_id = info.song_id()
-        if song_id != self._last_song_id:
-            self._last_song_id = song_id
-            self._current_lyrics = self._lyrics_engine.get_lyrics(info.title, info.artist)
+        if not lyrics:
+            return {**base, "status": "loading" if loading else "no_lyrics"}
 
-        if not self._current_lyrics:
-            return {**base, "status": "no_lyrics"}
+        idx = self._lyrics_engine.get_current_index(lyrics, position)
+        prev, curr, nxt = self._lyrics_engine.get_context(lyrics, idx)
 
-        idx = self._lyrics_engine.get_current_index(self._current_lyrics, position)
-        prev, curr, nxt = self._lyrics_engine.get_context(self._current_lyrics, idx)
+        # 다음 가사까지 남은 ms — JS 타겟 스케줄링용 (없으면 None)
+        ms_to_next = None
+        if idx + 1 < len(lyrics):
+            ms_to_next = max(0, round((lyrics[idx + 1][0] - position) * 1000))
 
-        return {**base, "status": "playing", "prev": prev, "current": curr, "next": nxt}
+        return {**base, "status": "playing",
+                "prev": prev, "current": curr, "next": nxt,
+                "ms_to_next": ms_to_next}
 
-    # JS 폴링(150ms) + 페이드 애니메이션(100ms) 합산 지연 보상
-    _LYRIC_LOOKAHEAD = 0.08
+    def _fetch_lyrics_bg(self, title: str, artist: str, song_id: str) -> None:
+        try:
+            lyrics = self._lyrics_engine.get_lyrics(title, artist)
+        except Exception as e:
+            logger.warning("가사 로딩 실패: %s", e)
+            lyrics = []
+        with self._lyrics_lock:
+            if self._last_song_id == song_id:  # 로딩 중 곡이 바뀌었으면 폐기
+                self._current_lyrics = lyrics
+            self._lyrics_loading = False
+
+    # 타겟 스케줄링 도입 후 실제 지연: 렌더 ~16ms + 페이드 100ms → 120ms
+    # 여유 80ms 포함해 200ms로 설정
+    _LYRIC_LOOKAHEAD = 0.20
 
     def _estimate_position(self, info) -> float:
-        """SMTC position 업데이트 공백을 monotonic 경과 시간으로 보완."""
+        """SMTC 500ms 폴링 공백을 monotonic 시계로 보완.
+
+        Melon은 SMTC position을 재생 중에도 거의 갱신하지 않으므로
+        'estimated vs SMTC' 비교는 하지 않는다.
+        대신 SMTC position 자체가 크게 점프할 때만 seek로 판단한다.
+        """
         now = time.monotonic()
         if info.is_playing:
-            # position이 0.5초 이상 바뀌었거나 재생 시작 시 기준 갱신
-            if abs(info.position - self._pos_base) > 0.5 or not self._pos_was_playing:
-                self._pos_base = info.position
+            smtc_jump = abs(info.position - self._prev_smtc_pos)
+
+            if smtc_jump > 3.0:
+                # seek / 이전곡 / 처음부터 재생 감지 — pause→play 전환 중에도 적용
+                new_base = info.position if info.position > 0.5 else 0.0
+                self._pos_base = new_base
+                self._paused_position = new_base
                 self._pos_base_time = now
+                self._prev_smtc_pos = info.position
+            elif not self._pos_was_playing:
+                # 일반 일시정지→재개 (seek 없음)
+                self._pos_base = self._paused_position
+                self._pos_base_time = now
+                self._prev_smtc_pos = info.position
+            else:
+                self._prev_smtc_pos = info.position
+
             self._pos_was_playing = True
             estimated = self._pos_base + (now - self._pos_base_time) + self._LYRIC_LOOKAHEAD
-            # duration을 넘지 않도록 클램프
             if info.duration > 0:
                 estimated = min(estimated, info.duration)
             return estimated
         else:
-            self._pos_base = info.position
-            self._pos_base_time = now
+            if self._pos_was_playing:
+                # 재생→정지: 현재 추정 위치 저장
+                est = self._pos_base + (now - self._pos_base_time)
+                if info.duration > 0:
+                    est = min(est, info.duration)
+                self._paused_position = est
             self._pos_was_playing = False
-            return info.position
+            return self._paused_position
 
-    # ── 앨범아트 (곡 변경 시 JS가 1회 호출) ──────────────────────────
-
+    # ── 앨범아트 ──
     def get_album_art(self) -> str:
         """base64 data URL 반환. 없으면 빈 문자열."""
         try:
@@ -115,19 +171,25 @@ class LyricApi:
         except Exception:
             return ""
 
-    # ── 미디어 컨트롤 ────────────────────────────────────────────────
-
+    # ── 미디어 컨트롤 ──
     def media_prev(self) -> None:
         self._send_vk(_VK_PREV)
+        self._pos_base = 0.0
+        self._paused_position = 0.0
+        self._pos_base_time = time.monotonic()
+        self._prev_smtc_pos = 0.0
 
     def media_play_pause(self) -> None:
         self._send_vk(_VK_PLAY_PAUSE)
 
     def media_next(self) -> None:
         self._send_vk(_VK_NEXT)
+        self._pos_base = 0.0
+        self._paused_position = 0.0
+        self._pos_base_time = time.monotonic()
+        self._prev_smtc_pos = 0.0
 
-    # ── 볼륨 ─────────────────────────────────────────────────────────
-
+    # ── 볼륨 ──
     @staticmethod
     def _endpoint_vol():
         """pycaw로 IAudioEndpointVolume 인터페이스 반환."""
@@ -150,8 +212,7 @@ class LyricApi:
         except Exception as e:
             logger.debug("볼륨 설정 오류: %s", e)
 
-    # ── 레이아웃 모드 전환 ────────────────────────────────────────────
-
+    # ── 레이아웃 모드 전환 ──
     def set_layout_mode(self, mode: str) -> dict:
         """가로/세로 모드 전환 — 항상 기본 위치·설정으로 초기화."""
         if mode not in ("horizontal", "vertical"):
@@ -181,8 +242,7 @@ class LyricApi:
         self._apply_opacity()
         return {"mode": mode, "w": w, "h": h, "config": asdict(self._cfg)}
 
-    # ── 설정 ─────────────────────────────────────────────────────────
-
+    # ── 설정 ───
     def get_config(self) -> dict:
         return asdict(self._cfg)
 

@@ -13,7 +13,11 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "WARNING"))
 # 앱 종료 시 WebView2 삭제 후 pywebview 내부에서 발생하는 무해한 ObjectDisposedException 억제
 class _IgnoreDisposed(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        return "ObjectDisposedException" not in str(record.getMessage())
+        if "ObjectDisposedException" in str(record.getMessage()):
+            return False
+        if record.exc_info and "ObjectDisposedException" in str(record.exc_info):
+            return False
+        return True
 
 logging.getLogger("pywebview").addFilter(_IgnoreDisposed())
 
@@ -57,13 +61,11 @@ class App:
         self._window.events.closed  += self._on_closed
         self._window.events.loaded  += self._on_loaded
 
-    # ── 실행 ─────────────────────────────────────────────────────────
-
+    # ── 실행 ──
     def run(self) -> None:
         webview.start(func=self._on_start, debug=False)
 
-    # ── 이벤트 콜백 ──────────────────────────────────────────────────
-
+    # ── 이벤트 콜백 ──
     def _on_start(self) -> None:
         """webview 루프 시작 후 별도 스레드에서 호출."""
         self._poller.start()
@@ -85,8 +87,7 @@ class App:
         if self._tray:
             self._tray.stop()
 
-    # ── 트레이 ───────────────────────────────────────────────────────
-
+    # ── 트레이 ──
     def _create_tray(self) -> pystray.Icon:
         img = self._make_icon()
 
@@ -121,8 +122,7 @@ class App:
         )
         return pystray.Icon("쇼리릭", img, "🎵 쇼리릭", menu)
 
-    # ── 유틸 ─────────────────────────────────────────────────────────
-
+    # ── 유틸 ──
     def _initial_geometry(self) -> tuple[int, int, int, int]:
         """_work_area() 기준 논리 픽셀로 초기 창 위치·크기 계산."""
         sw, sh, _ = self._api._work_area()
@@ -137,8 +137,6 @@ class App:
         return x, y, w, h
 
     def _save_state(self) -> None:
-        # 세로 모드: 위치/크기 저장 안 함 — DPI 스케일링으로 값이 계속 바뀌는 문제 방지
-        # 가로 모드: 높이만 저장 (전체 너비는 항상 화면 너비라 저장 불필요)
         if self.config.layout_mode == "horizontal":
             try:
                 import win32gui
@@ -156,11 +154,8 @@ class App:
         sz = 64
         img = Image.new("RGBA", (sz, sz), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
-        # 핑크 원 배경
         d.ellipse([2, 2, sz-2, sz-2], fill=(232, 112, 168, 230))
-        # 흰 하이라이트 (젤리 느낌)
         d.ellipse([8, 8, 34, 30], fill=(255, 255, 255, 90))
-        # 음표
         d.rectangle([36, 14, 42, 42], fill=(255, 255, 255, 220))
         d.ellipse([22, 36, 40, 50], fill=(255, 255, 255, 220))
         d.arc([36, 14, 52, 28], start=0, end=180, fill=(255, 255, 255, 220), width=4)

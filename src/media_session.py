@@ -27,7 +27,7 @@ $asTaskBase = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Objec
 function Await-Op { param($op, [Type]$t); return $asTaskBase.MakeGenericMethod($t).Invoke($null, @($op)).GetAwaiter().GetResult() }
 """
 
-# ── PS7 폴링 스크립트 (pwsh 설치 시) ─────────────────────────
+# ── PS7 폴링 스크립트 (pwsh 설치 시) ──
 _PS7_SCRIPT = r"""
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -42,6 +42,16 @@ function Get-BestSession($mgr) {
     return $null
 }
 
+# LastUpdatedTime 보정: WinRT DateTime은 DateTimeOffset으로 프로젝션됨 → [DateTimeOffset]::UtcNow 사용
+function Get-AdjustedPosition($tl) {
+    $raw = [double]$tl.Position.TotalSeconds
+    try {
+        $stale = ([DateTimeOffset]::UtcNow - [DateTimeOffset]$tl.LastUpdatedTime).TotalSeconds
+        if ($stale -gt 0.0 -and $stale -lt 300.0) { return $raw + $stale }
+    } catch {}
+    return $raw
+}
+
 $mgr = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync().GetAwaiter().GetResult()
 while ($true) {
     try {
@@ -53,7 +63,7 @@ while ($true) {
             [PSCustomObject]@{
                 title      = [string]$p.Title
                 artist     = [string]$p.Artist
-                position   = [double]$tl.Position.TotalSeconds
+                position   = Get-AdjustedPosition $tl
                 duration   = [double]$tl.EndTime.TotalSeconds
                 is_playing = ($pb.PlaybackStatus.ToString() -eq 'Playing')
             } | ConvertTo-Json -Compress
@@ -64,11 +74,11 @@ while ($true) {
         '{"title":"","artist":"","position":0.0,"duration":0.0,"is_playing":false}'
     }
     [Console]::Out.Flush()
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 250
 }
 """
 
-# ── PS5.1 폴링 스크립트 ──────────────────────────────────────
+# ── PS5.1 폴링 스크립트 ──
 _PS51_SCRIPT = _PS51_INIT + r"""
 function Get-BestSession($mgr) {
     $sessions = $mgr.GetSessions()
@@ -77,6 +87,15 @@ function Get-BestSession($mgr) {
     }
     if ($sessions.Count -gt 0) { return $sessions[0] }
     return $null
+}
+
+function Get-AdjustedPosition($tl) {
+    $raw = [double]$tl.Position.TotalSeconds
+    try {
+        $stale = ([DateTimeOffset]::UtcNow - [DateTimeOffset]$tl.LastUpdatedTime).TotalSeconds
+        if ($stale -gt 0.0 -and $stale -lt 300.0) { return $raw + $stale }
+    } catch {}
+    return $raw
 }
 
 $mgr = Await-Op ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
@@ -90,7 +109,7 @@ while ($true) {
             [PSCustomObject]@{
                 title      = [string]$p.Title
                 artist     = [string]$p.Artist
-                position   = [double]$tl.Position.TotalSeconds
+                position   = Get-AdjustedPosition $tl
                 duration   = [double]$tl.EndTime.TotalSeconds
                 is_playing = ($pb.PlaybackStatus.ToString() -eq 'Playing')
             } | ConvertTo-Json -Compress
@@ -101,11 +120,11 @@ while ($true) {
         '{"title":"","artist":"","position":0.0,"duration":0.0,"is_playing":false}'
     }
     [Console]::Out.Flush()
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 250
 }
 """
 
-# ── 앨범아트 PS7 스크립트 (임시 파일 경유) ──────────────────
+# ── 앨범아트 PS7 스크립트 (임시 파일 경유) ──
 _ART_PS7_SCRIPT = r"""
 try {
     $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType=WindowsRuntime]
@@ -292,22 +311,29 @@ class MediaSessionPoller:
             logger.debug("iTunes 앨범아트 실패: %s", e)
         return ""
 
-    # ── 내부 루프 ─────────────────────────────────────────────────────
-
+    # ── 내부 루프 ──
     def _run(self) -> None:
-        proc = self._try_start("pwsh", _PS7_SCRIPT)
-        if proc:
-            self._ps_exe = "pwsh"
-        else:
-            proc = self._try_start("powershell", _PS51_SCRIPT)
-            self._ps_exe = "powershell"
-
-        if proc:
-            self._proc = proc
-            self._read_loop(proc)
+        # 사용 가능한 PS 버전 탐지 후 첫 실행
+        for exe, script in [("pwsh", _PS7_SCRIPT), ("powershell", _PS51_SCRIPT)]:
+            proc = self._try_start(exe, script)
+            if proc is not None:
+                self._ps_exe = exe
+                self._proc = proc
+                self._read_loop(proc)
+                break
         else:
             logger.warning("PowerShell SMTC 실패 → 창 제목 폴백")
             self._fallback_loop()
+            return
+
+        # [버그3 수정] PS 프로세스가 죽으면 같은 버전으로 자동 재시작
+        script = _PS7_SCRIPT if self._ps_exe == "pwsh" else _PS51_SCRIPT
+        while self._running:
+            time.sleep(1)
+            proc = self._try_start(self._ps_exe, script)
+            if proc:
+                self._proc = proc
+                self._read_loop(proc)
 
     def _try_start(self, exe: str, script: str) -> Optional[subprocess.Popen]:
         try:
@@ -316,14 +342,18 @@ class MediaSessionPoller:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
-                encoding="utf-8-sig",  # BOM 자동 제거 + UTF-8 디코딩
+                encoding="utf-8-sig",
                 errors="replace",
                 creationflags=subprocess.CREATE_NO_WINDOW,
             )
-            line = proc.stdout.readline()
-            if line.strip().startswith("{"):
-                self._parse_line(line)
-                return proc
+            # PS 초기화 중 비-JSON 줄이 섞일 수 있으므로 최대 5줄 확인
+            for _ in range(5):
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                if line.strip().startswith("{"):
+                    self._parse_line(line)
+                    return proc
             proc.terminate()
             return None
         except (FileNotFoundError, OSError):
@@ -356,8 +386,7 @@ class MediaSessionPoller:
         except (json.JSONDecodeError, ValueError):
             pass
 
-    # ── 창 제목 폴백 ──────────────────────────────────────────────────
-
+    # ── 창 제목 폴백 ──
     def _fallback_loop(self) -> None:
         import win32gui
         while self._running:
@@ -383,8 +412,7 @@ class MediaSessionPoller:
                 self._info = info
             time.sleep(0.5)
 
-    # ── 1회성 PS 실행 ─────────────────────────────────────────────────
-
+    # ── 1회성 PS 실행 ──
     @staticmethod
     def _run_ps_once(exe: str, script: str, timeout: int = 10) -> str:
         try:

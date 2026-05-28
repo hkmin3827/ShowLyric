@@ -41,3 +41,5 @@ frontend/UI/
 *.vbs
 *.spec
 *.bat
+*.log
+debug_poll.py
